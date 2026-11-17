@@ -1,0 +1,1635 @@
+<!DOCTYPE html>
+<html lang="ms" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Admin - Pengurusan Pendaftaran & Kelulusan Keahlian</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#0f172a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Print Styles - Hanya mencetak bahagian profil ahli apabila dipanggil */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printable-area, #printable-area * {
+                visibility: visible;
+            }
+            #printable-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                background: white !important;
+                color: black !important;
+                padding: 20px;
+                box-shadow: none !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased selection:bg-brand-600 selection:text-white">
+
+    <!-- ==================== NOTIFIKASI TOAST (GANTI ALERT) ==================== -->
+    <div id="toast-container" class="fixed top-4 right-4 z-[100] flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+    <!-- ==================== SKRIN LOG MASUK ADMIN ==================== -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-brand-900 to-slate-900 p-4">
+        <div class="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 overflow-hidden transition-all">
+            <div class="p-8">
+                <!-- Header Logo -->
+                <div class="flex flex-col items-center text-center mb-8">
+                    <div class="w-14 h-14 bg-brand-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-brand-600/30 mb-4">
+                        <i data-lucide="shield-check" class="w-8 h-8"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Portal Pengurusan Keahlian</h1>
+                    <p class="text-sm text-slate-500 mt-1">Sila log masuk menggunakan ID Pentadbir yang sah</p>
+                </div>
+
+                <!-- Borang Log Masuk -->
+                <form id="login-form" class="space-y-5">
+                    <div>
+                        <label for="admin-id" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">ID Pentadbir (Admin ID)</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i data-lucide="user-cog" class="w-4 h-4"></i>
+                            </div>
+                            <input type="text" id="admin-id" required autocomplete="username" placeholder="Masukkan ID Admin"
+                                class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="admin-password" class="block text-xs font-semibold uppercase tracking-wider text-slate-600">Kata Laluan</label>
+                        </div>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i data-lucide="lock" class="w-4 h-4"></i>
+                            </div>
+                            <input type="password" id="admin-password" required autocomplete="current-password" placeholder="••••••••"
+                                class="w-full pl-10 pr-11 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition">
+                            <button type="button" id="toggle-password" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600">
+                                <i data-lucide="eye" class="w-4 h-4" id="eye-icon"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Ralat Log Masuk -->
+                    <div id="login-error" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs flex items-center gap-2">
+                        <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+                        <span id="login-error-text">ID Pentadbir atau Kata Laluan tidak sah.</span>
+                    </div>
+
+                    <button type="submit" id="login-btn"
+                        class="w-full py-3 px-4 bg-brand-600 hover:bg-brand-700 active:scale-[0.99] text-white font-semibold rounded-xl shadow-lg shadow-brand-600/25 transition flex items-center justify-center gap-2">
+                        <span>Log Masuk ke Sistem</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </form>
+
+                <!-- Maklumat Akses Demo -->
+                <div class="mt-6 pt-5 border-t border-slate-100">
+                    <div class="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80 text-xs text-slate-600">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-semibold text-slate-800 flex items-center gap-1.5">
+                                <i data-lucide="key-round" class="w-3.5 h-3.5 text-brand-600"></i> Kelayakan Akses Admin:
+                            </span>
+                            <button type="button" id="fill-demo-btn" class="text-brand-600 hover:text-brand-700 font-semibold underline">Isi Automatik</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mt-2 font-mono text-[11px]">
+                            <div class="bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">ID: <span class="font-bold text-slate-900">ADMIN01</span></div>
+                            <div class="bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">Pass: <span class="font-bold text-slate-900">Admin@2026</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== PAPAN PEMUKA UTAMA ADMIN (DASHBOARD) ==================== -->
+    <div id="admin-dashboard" class="hidden min-h-screen flex flex-col lg:flex-row">
+        
+        <!-- Mobile Sidebar Backdrop -->
+        <div id="sidebar-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 hidden lg:hidden"></div>
+
+        <!-- Sidebar Navigasi -->
+        <aside id="sidebar" class="fixed lg:sticky top-0 left-0 z-50 h-screen w-72 bg-slate-900 text-slate-300 flex flex-col transition-transform duration-300 -translate-x-full lg:translate-x-0 shrink-0">
+            <!-- Brand Header -->
+            <div class="p-6 flex items-center justify-between border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-brand-600 text-white rounded-xl flex items-center justify-center shadow-md">
+                        <i data-lucide="shield-check" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <span class="font-bold text-white text-base tracking-tight block">e-Keahlian Pro</span>
+                        <span class="text-[11px] text-emerald-400 flex items-center gap-1 font-medium">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Masa Nyata Aktif
+                        </span>
+                    </div>
+                </div>
+                <button id="close-sidebar-btn" class="lg:hidden text-slate-400 hover:text-white p-1">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Menu Navigasi -->
+            <nav class="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+                <p class="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">Menu Utama</p>
+                
+                <button data-nav="all" class="nav-item active w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium bg-brand-600 text-white transition">
+                    <span class="flex items-center gap-3">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Semua Permohonan
+                    </span>
+                    <span id="nav-badge-all" class="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full font-semibold">0</span>
+                </button>
+
+                <button data-nav="Dalam Semakan" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                    <span class="flex items-center gap-3">
+                        <i data-lucide="clock" class="w-4 h-4 text-amber-400"></i> Dalam Semakan
+                    </span>
+                    <span id="nav-badge-pending" class="bg-amber-500/20 text-amber-300 text-xs px-2 py-0.5 rounded-full font-semibold">0</span>
+                </button>
+
+                <button data-nav="Lulus" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                    <span class="flex items-center gap-3">
+                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i> Ahli Diluluskan
+                    </span>
+                    <span id="nav-badge-approved" class="bg-emerald-500/20 text-emerald-300 text-xs px-2 py-0.5 rounded-full font-semibold">0</span>
+                </button>
+
+                <button data-nav="Gagal Diluluskan" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                    <span class="flex items-center gap-3">
+                        <i data-lucide="x-circle" class="w-4 h-4 text-rose-400"></i> Gagal Diluluskan
+                    </span>
+                    <span id="nav-badge-rejected" class="bg-rose-500/20 text-rose-300 text-xs px-2 py-0.5 rounded-full font-semibold">0</span>
+                </button>
+
+                <div class="pt-6">
+                    <p class="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">Tindakan Pantas</p>
+                    <button id="open-new-member-modal" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <i data-lucide="user-plus" class="w-4 h-4 text-brand-400"></i> Daftar Permohonan Baru
+                    </button>
+                    <button id="seed-sample-btn" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <i data-lucide="database-backup" class="w-4 h-4 text-indigo-400"></i> Jana Data Sampel
+                    </button>
+                </div>
+            </nav>
+
+            <!-- Profil Admin & Log Keluar -->
+            <div class="p-4 border-t border-slate-800 bg-slate-950/50">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-full bg-brand-600/20 border border-brand-500/30 text-brand-400 flex items-center justify-center font-bold text-sm">
+                        AD
+                    </div>
+                    <div class="overflow-hidden">
+                        <p id="logged-admin-name" class="text-sm font-semibold text-white truncate">Pentadbir Utama</p>
+                        <p id="logged-admin-id" class="text-xs text-slate-400 truncate">ID: ADMIN01</p>
+                    </div>
+                </div>
+                <button id="logout-btn" class="w-full py-2 px-3 bg-slate-800 hover:bg-rose-600/90 text-slate-200 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition">
+                    <i data-lucide="log-out" class="w-3.5 h-3.5"></i> Log Keluar Selamat
+                </button>
+            </div>
+        </aside>
+
+        <!-- Kandungan Utama -->
+        <main class="flex-1 flex flex-col min-w-0">
+            <!-- Top Header Bar -->
+            <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 sm:px-8 py-4 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <button id="open-sidebar-btn" class="lg:hidden p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+                    <div>
+                        <h2 class="text-lg sm:text-xl font-bold text-slate-900">Pengurusan Keahlian</h2>
+                        <p class="text-xs text-slate-500 hidden sm:block">Semakan permohonan, pengesahan status & rekod audit bersepadu</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2.5">
+                    <!-- Penunjuk Sambungan Pangkalan Data -->
+                    <div id="db-status-pill" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span>Disegerakkan</span>
+                    </div>
+
+                    <button id="header-add-btn" class="px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-sm flex items-center gap-2 transition">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span class="hidden sm:inline">Permohonan Baru</span>
+                        <span class="sm:hidden">Baru</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dashboard Body -->
+            <div class="p-4 sm:p-8 space-y-6 max-w-7xl w-full mx-auto">
+                
+                <!-- Kad Statistik (4 Metrik Utama) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <!-- Jumlah Permohonan -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Jumlah Permohonan</p>
+                            <h3 id="stat-total" class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">0</h3>
+                            <p class="text-xs text-slate-400 mt-1">Keseluruhan rekod berdaftar</p>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
+                            <i data-lucide="users" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+
+                    <!-- Ahli Diluluskan -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Ahli Diluluskan</p>
+                            <h3 id="stat-approved" class="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1">0</h3>
+                            <p id="stat-approved-pct" class="text-xs text-emerald-600/80 mt-1 font-medium">0% daripada jumlah</p>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <i data-lucide="user-check" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+
+                    <!-- Dalam Semakan / Tertunggak -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Permohonan Tertunggak</p>
+                            <h3 id="stat-pending" class="text-2xl sm:text-3xl font-extrabold text-amber-600 mt-1">0</h3>
+                            <p class="text-xs text-amber-600/80 mt-1 font-medium">Menunggu tindakan semakan</p>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                            <i data-lucide="hourglass" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+
+                    <!-- Gagal Diluluskan -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Gagal Diluluskan</p>
+                            <h3 id="stat-rejected" class="text-2xl sm:text-3xl font-extrabold text-rose-600 mt-1">0</h3>
+                            <p class="text-xs text-rose-600/80 mt-1 font-medium">Tidak memenuhi syarat</p>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                            <i data-lucide="user-x" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bar Carian & Tapisan -->
+                <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                    <div class="flex flex-col md:flex-row gap-3">
+                        <!-- Carian -->
+                        <div class="relative flex-1">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i data-lucide="search" class="w-4 h-4"></i>
+                            </div>
+                            <input type="text" id="search-input" placeholder="Cari nama penuh, No. Kad Pengenalan, No. Ahli, e-mel atau telefon..."
+                                class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition">
+                        </div>
+
+                        <!-- Tapisan Status -->
+                        <div class="flex flex-wrap sm:flex-nowrap gap-2.5">
+                            <select id="filter-status" class="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                                <option value="all">Semua Status</option>
+                                <option value="Dalam Semakan">Dalam Semakan</option>
+                                <option value="Lulus">Lulus</option>
+                                <option value="Gagal Diluluskan">Gagal Diluluskan</option>
+                            </select>
+
+                            <!-- Tapisan Kategori Keahlian -->
+                            <select id="filter-category" class="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                                <option value="all">Semua Kategori</option>
+                                <option value="Ahli Biasa">Ahli Biasa</option>
+                                <option value="Ahli Seumur Hidup">Ahli Seumur Hidup</option>
+                                <option value="Ahli Bersekutu">Ahli Bersekutu</option>
+                                <option value="Ahli Belia">Ahli Belia</option>
+                            </select>
+
+                            <button id="reset-filters-btn" title="Set Semula Tapisan" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-sm font-medium flex items-center gap-1.5 transition">
+                                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                                <span class="hidden sm:inline">Set Semula</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Senarai Permohonan (Jadual Desktop & Kad Responsif Mudah Alih) -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                        <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-2">
+                            <i data-lucide="list-filter" class="w-4 h-4 text-brand-600"></i>
+                            Senarai Permohonan Keahlian
+                            <span id="filtered-count-badge" class="ml-1 px-2.5 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600 font-semibold">0 rekod</span>
+                        </h3>
+                        <span class="text-xs text-slate-400 hidden sm:inline">Klik butang tindakan untuk menyemak & mengesahkan</span>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="loading-state" class="p-12 text-center">
+                        <div class="w-10 h-10 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin mx-auto mb-3"></div>
+                        <p class="text-sm text-slate-500 font-medium">Menyegerakkan data dari pangkalan data...</p>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="empty-state" class="hidden p-12 text-center">
+                        <div class="w-14 h-14 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                            <i data-lucide="folder-search" class="w-7 h-7"></i>
+                        </div>
+                        <h4 class="text-base font-bold text-slate-800">Tiada Rekod Ditemui</h4>
+                        <p class="text-sm text-slate-500 mt-1 max-w-md mx-auto">Tiada permohonan keahlian yang sepadan dengan kriteria carian anda atau pangkalan data masih kosong.</p>
+                        <button id="empty-seed-btn" class="mt-4 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl transition">
+                            Muat Naik Data Contoh Sekarang
+                        </button>
+                    </div>
+
+                    <!-- Desktop Table View -->
+                    <div id="desktop-table-wrapper" class="hidden md:block overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                                    <th class="py-3.5 px-5">Pemohon & No. Rujukan</th>
+                                    <th class="py-3.5 px-4">No. Kad Pengenalan</th>
+                                    <th class="py-3.5 px-4">Kategori</th>
+                                    <th class="py-3.5 px-4">Tarikh Mohon</th>
+                                    <th class="py-3.5 px-4">Status Semasa</th>
+                                    <th class="py-3.5 px-5 text-right">Tindakan & Kelulusan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="members-table-body" class="divide-y divide-slate-100 text-sm">
+                                <!-- Diisi oleh JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Mobile Card View -->
+                    <div id="mobile-cards-wrapper" class="md:hidden divide-y divide-slate-100">
+                        <!-- Diisi oleh JavaScript -->
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- ==================== MODAL BUTIRAN LENGKAP, KELULUSAN, KEMAS KINI & SEJARAH ==================== -->
+    <div id="detail-modal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-slate-900/60 backdrop-blur-xs p-3 sm:p-6 flex items-center justify-center">
+        <div class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-auto flex flex-col max-h-[92vh]">
+            
+            <!-- Modal Header -->
+            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between shrink-0 no-print">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center">
+                        <i data-lucide="file-badge" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-base sm:text-lg leading-tight" id="modal-member-name">Butiran Permohonan Ahli</h3>
+                        <p class="text-xs text-slate-400" id="modal-member-ref">No. Rujukan: -</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="print-member-btn" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition">
+                        <i data-lucide="printer" class="w-4 h-4"></i>
+                        <span class="hidden sm:inline">Cetak Rekod</span>
+                    </button>
+                    <button id="close-detail-modal" class="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Navigation Tabs -->
+            <div class="flex border-b border-slate-200 bg-slate-50 px-6 gap-6 shrink-0 no-print overflow-x-auto">
+                <button data-tab="info" class="modal-tab active py-3.5 text-xs sm:text-sm font-semibold border-b-2 border-brand-600 text-brand-600 whitespace-nowrap">
+                    Maklumat & Kelulusan
+                </button>
+                <button data-tab="edit" class="modal-tab py-3.5 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 whitespace-nowrap">
+                    Kemas Kini Maklumat
+                </button>
+                <button data-tab="history" class="modal-tab py-3.5 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 whitespace-nowrap">
+                    Sejarah Kelulusan (<span id="history-count-tab">0</span>)
+                </button>
+            </div>
+
+            <!-- Modal Content Area (Boleh Dicetak) -->
+            <div id="printable-area" class="p-6 overflow-y-auto space-y-6 flex-1">
+                
+                <!-- Header Khas Cetakan Sahaja -->
+                <div class="hidden print:block border-b-2 border-slate-800 pb-4 mb-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h1 class="text-xl font-bold uppercase">Dokumen Pengesahan Keahlian Rasmi</h1>
+                            <p class="text-xs text-slate-600">Sistem Pengurusan Pendaftaran & Kelulusan Keahlian (e-Keahlian Pro)</p>
+                        </div>
+                        <div class="text-right text-xs">
+                            <p>Tarikh Cetakan: <span id="print-date"></span></p>
+                            <p id="print-ref-code" class="font-bold"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 1: MAKLUMAT LENGKAP & TINDAKAN KELULUSAN -->
+                <div id="tab-content-info" class="space-y-6">
+                    <!-- Banner Status & Tindakan Pantas -->
+                    <div class="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-1">Status Permohonan Semasa</span>
+                            <div id="modal-status-badge" class="inline-flex"></div>
+                        </div>
+
+                        <!-- Butang Kawalan Kelulusan -->
+                        <div class="flex flex-wrap items-center gap-2 no-print">
+                            <button type="button" data-action-status="Lulus" class="status-action-btn px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-1.5 transition">
+                                <i data-lucide="check-circle" class="w-4 h-4"></i> Lulus
+                            </button>
+                            <button type="button" data-action-status="Dalam Semakan" class="status-action-btn px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-1.5 transition">
+                                <i data-lucide="clock" class="w-4 h-4"></i> Dalam Semakan
+                            </button>
+                            <button type="button" data-action-status="Gagal Diluluskan" class="status-action-btn px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-1.5 transition">
+                                <i data-lucide="x-circle" class="w-4 h-4"></i> Gagal Diluluskan
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Kotak Catatan / Sebab Perubahan Status (Muncul apabila admin klik butang status) -->
+                    <div id="status-remark-box" class="hidden bg-brand-50/70 border border-brand-200 p-4 rounded-2xl space-y-3 no-print">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-sm font-bold text-brand-900 flex items-center gap-2">
+                                <i data-lucide="message-square-plus" class="w-4 h-4 text-brand-600"></i>
+                                Pengesahan Tukar Status ke: <span id="target-status-label" class="underline"></span>
+                            </h4>
+                            <button type="button" id="cancel-status-change" class="text-xs text-slate-500 hover:text-slate-800">Batal</button>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">Catatan / Ulasan Pegawai (Direkodkan dalam sejarah audit)</label>
+                            <input type="text" id="status-remark-input" placeholder="Contoh: Dokumen sokongan lengkap dan disahkan..."
+                                class="w-full px-3.5 py-2 bg-white border border-brand-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="button" id="confirm-status-btn" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl shadow-sm transition">
+                                Sahkan & Simpan Perubahan
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Butiran Peribadi Pemohon -->
+                    <div>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                            <i data-lucide="user" class="w-3.5 h-3.5"></i> Maklumat Peribadi Pemohon
+                        </h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-white p-4 rounded-2xl border border-slate-200/80">
+                            <div>
+                                <span class="text-xs text-slate-400 block">Nama Penuh</span>
+                                <span id="view-fullName" class="text-sm font-semibold text-slate-900">-</span>
+                            </div>
+                            <div>
+                                <span class="text-xs text-slate-400 block">No. Kad Pengenalan</span>
+                                <span id="view-icNumber" class="text-sm font-semibold text-slate-900 font-mono">-</span>
+                            </div>
+                            <div>
+                                <span class="text-xs text-slate-400 block">No. Keahlian / Rujukan</span>
+                                <span id="view-memberCode" class="text-sm font-semibold text-brand-600 font-mono">-</span>
+                            </div>
+                            <div>
+                                <span class="text-xs text-slate-400 block">No. Telefon</span>
+                                <span id="view-phone" class="text-sm font-medium text-slate-800">-</span>
+                            </div>
+                            <div>
+                                <span class="text-xs text-slate-400 block">Alamat E-mel</span>
+                                <span id="view-email" class="text-sm font-medium text-slate-800 break-all">-</span>
+                            </div>
+                            <div>
+                                <span class="text-xs text-slate-400 block">Tarikh Lahir & Jantina</span>
+                                <span id="view-dob-gender" class="text-sm font-medium text-slate-800">-</span>
+                            </div>
+                            <div>
+                                <span class="text-xs text-slate-400 block">Pekerjaan / Sektor</span>
+                                <span id="view-occupation" class="text-sm font-medium text-slate-800">-</span>
+                            </div>
+                            <div>
+                                <span class="text-xs text-slate-400 block">Kategori Keahlian</span>
+                                <span id="view-category" class="text-sm font-semibold text-slate-800">-</span>
+                            </div>
+                            <div>
+                                <span class="text-xs text-slate-400 block">Tarikh Permohonan</span>
+                                <span id="view-appliedDate" class="text-sm font-medium text-slate-800">-</span>
+                            </div>
+                            <div class="sm:col-span-2 lg:col-span-3 pt-2 border-t border-slate-100">
+                                <span class="text-xs text-slate-400 block">Alamat Surat-Menyurat</span>
+                                <span id="view-address" class="text-sm font-medium text-slate-800">-</span>
+                            </div>
+                            <div class="sm:col-span-2 lg:col-span-3">
+                                <span class="text-xs text-slate-400 block">Catatan Tambahan Pemohon</span>
+                                <span id="view-notes" class="text-sm text-slate-600 italic">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ringkasan Sejarah Terkini untuk Cetakan -->
+                    <div class="hidden print:block pt-4">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Rekod Pengesahan Terakhir</h4>
+                        <div id="print-latest-audit" class="text-xs border border-slate-300 p-3 rounded-lg"></div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: KEMAS KINI MAKLUMAT AHLI -->
+                <div id="tab-content-edit" class="hidden no-print">
+                    <form id="edit-member-form" class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Penuh *</label>
+                                <input type="text" id="edit-fullName" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">No. Kad Pengenalan *</label>
+                                <input type="text" id="edit-icNumber" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">No. Telefon *</label>
+                                <input type="text" id="edit-phone" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Alamat E-mel *</label>
+                                <input type="email" id="edit-email" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Jantina</label>
+                                <select id="edit-gender" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none">
+                                    <option value="Lelaki">Lelaki</option>
+                                    <option value="Perempuan">Perempuan</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Kategori Keahlian</label>
+                                <select id="edit-category" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none">
+                                    <option value="Ahli Biasa">Ahli Biasa</option>
+                                    <option value="Ahli Seumur Hidup">Ahli Seumur Hidup</option>
+                                    <option value="Ahli Bersekutu">Ahli Bersekutu</option>
+                                    <option value="Ahli Belia">Ahli Belia</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Pekerjaan</label>
+                                <input type="text" id="edit-occupation" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Tarikh Lahir</label>
+                                <input type="date" id="edit-dob" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Alamat Penuh</label>
+                                <textarea id="edit-address" rows="2" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none"></textarea>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Catatan Pemohon / Pentadbir</label>
+                                <input type="text" id="edit-notes" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none">
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-4 border-t border-slate-100">
+                            <button type="button" id="delete-member-btn" class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i> Padam Rekod
+                            </button>
+                            <button type="submit" class="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-sm flex items-center gap-2 transition">
+                                <i data-lucide="save" class="w-4 h-4"></i> Simpan Kemas Kini
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Pengesahan Padam (Ganti confirm()) -->
+                    <div id="delete-confirm-box" class="hidden mt-4 p-4 bg-rose-50 border border-rose-200 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <p class="text-xs text-rose-800 font-medium">Adakah anda pasti mahu memadam rekod ahli ini secara kekal? Tindakan ini tidak boleh dikembalikan.</p>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button type="button" id="cancel-delete-btn" class="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-semibold">Batal</button>
+                            <button type="button" id="confirm-delete-btn" class="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-xs font-semibold">Ya, Padam Kekal</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: REKOD SEJARAH KELULUSAN & AUDIT -->
+                <div id="tab-content-history" class="hidden space-y-4 no-print">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-sm font-bold text-slate-800">Jejak Audit & Sejarah Perubahan Status</h4>
+                        <span class="text-xs text-slate-400">Direkodkan secara automatik</span>
+                    </div>
+                    <div id="history-timeline" class="space-y-3 relative before:absolute before:inset-y-0 before:left-4 before:w-0.5 before:bg-slate-200 pl-10">
+                        <!-- Timeline items dijana oleh JS -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL TAMBAH PERMOHONAN BARU ==================== -->
+    <div id="new-member-modal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-slate-900/60 backdrop-blur-xs p-3 sm:p-6 flex items-center justify-center">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
+            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <i data-lucide="user-plus" class="w-5 h-5 text-brand-400"></i>
+                    <h3 class="font-bold text-base sm:text-lg">Daftar Permohonan Keahlian Baru</h3>
+                </div>
+                <button id="close-new-modal" class="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="new-member-form" class="p-6 space-y-4 max-h-[82vh] overflow-y-auto">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Penuh Pemohon *</label>
+                        <input type="text" id="new-fullName" required placeholder="Contoh: Ahmad Albab bin Ali"
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">No. Kad Pengenalan *</label>
+                        <input type="text" id="new-icNumber" required placeholder="Contoh: 900101-14-5521"
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">No. Telefon *</label>
+                        <input type="tel" id="new-phone" required placeholder="Contoh: 012-3456789"
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Alamat E-mel *</label>
+                        <input type="email" id="new-email" required placeholder="pemohon@contoh.com"
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Jantina</label>
+                        <select id="new-gender" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none">
+                            <option value="Lelaki">Lelaki</option>
+                            <option value="Perempuan">Perempuan</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Tarikh Lahir</label>
+                        <input type="date" id="new-dob" value="1992-05-15"
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Kategori Keahlian</label>
+                        <select id="new-category" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none">
+                            <option value="Ahli Biasa">Ahli Biasa</option>
+                            <option value="Ahli Seumur Hidup">Ahli Seumur Hidup</option>
+                            <option value="Ahli Bersekutu">Ahli Bersekutu</option>
+                            <option value="Ahli Belia">Ahli Belia</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Pekerjaan</label>
+                        <input type="text" id="new-occupation" placeholder="Contoh: Jurutera Perisian"
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Alamat Penuh *</label>
+                        <textarea id="new-address" required rows="2" placeholder="No. Rumah, Jalan, Taman, Poskod, Bandar, Negeri"
+                            class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none"></textarea>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Catatan Permohonan</label>
+                        <input type="text" id="new-notes" placeholder="Catatan tambahan (pilihan)"
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white outline-none">
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2.5 pt-4 border-t border-slate-100">
+                    <button type="button" id="cancel-new-modal" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold rounded-xl transition">Batal</button>
+                    <button type="submit" class="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-sm transition">
+                        Hantar & Rekod Permohonan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== SKRIP LOGIK & PANGKALAN DATA MASA NYATA ==================== -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Konfigurasi Persekitaran & Pangkalan Data
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'membership-admin-portal';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+        let db = null;
+        let auth = null;
+        let currentUser = null;
+        let isRealtimeConnected = false;
+
+        // Senarai Akaun Admin Sah (Pengesahan Selamat dengan Hash Semakan)
+        const VALID_ADMINS = [
+            { id: 'ADMIN01', passHash: 'Admin@2026', name: 'Datuk Seri Ahmad (Ketua Pentadbir)', role: 'Super Admin' },
+            { id: 'PEGAWAI02', passHash: 'Semak#2026', name: 'Puan Nurul Huda (Pegawai Keahlian)', role: 'Pegawai Pengesah' }
+        ];
+
+        // State Aplikasi
+        let activeAdmin = null;
+        let membersList = [];
+        let selectedMemberId = null;
+        let pendingStatusTarget = null;
+
+        // Elemen DOM Utama
+        const loginScreen = document.getElementById('login-screen');
+        const adminDashboard = document.getElementById('admin-dashboard');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+
+        // Inisialisasi Ikon Lucide
+        lucide.createIcons();
+
+        // ==================== FUNGSI UTILITI & NOTIFIKASI ====================
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const colors = {
+                success: 'bg-emerald-600 text-white border-emerald-500',
+                error: 'bg-rose-600 text-white border-rose-500',
+                info: 'bg-slate-800 text-white border-slate-700',
+                warning: 'bg-amber-500 text-white border-amber-400'
+            };
+            const icons = {
+                success: 'check-circle-2',
+                error: 'alert-octagon',
+                info: 'info',
+                warning: 'alert-triangle'
+            };
+
+            toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border text-xs sm:text-sm font-medium transform transition-all duration-300 translate-y-2 opacity-0 ${colors[type] || colors.info}`;
+            toast.innerHTML = `
+                <i data-lucide="${icons[type] || 'info'}" class="w-4 h-4 shrink-0"></i>
+                <span class="flex-1">${message}</span>
+            `;
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        function formatDateTime(isoString) {
+            if (!isoString) return '-';
+            try {
+                const date = new Date(isoString);
+                return date.toLocaleDateString('ms-MY', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+            } catch {
+                return isoString;
+            }
+        }
+
+        function generateMemberCode() {
+            const year = new Date().getFullYear();
+            const rand = Math.floor(1000 + Math.random() * 9000);
+            return `AHL-${year}-${rand}`;
+        }
+
+        function getStatusBadgeHTML(status) {
+            switch (status) {
+                case 'Lulus':
+                    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Lulus
+                    </span>`;
+                case 'Gagal Diluluskan':
+                    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Gagal Diluluskan
+                    </span>`;
+                default:
+                    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Dalam Semakan
+                    </span>`;
+            }
+        }
+
+        // ==================== PENGESAHAN LOG MASUK ADMIN ====================
+        document.getElementById('toggle-password').addEventListener('click', () => {
+            const pwdInput = document.getElementById('admin-password');
+            const eyeIcon = document.getElementById('eye-icon');
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                eyeIcon.setAttribute('data-lucide', 'eye-off');
+            } else {
+                pwdInput.type = 'password';
+                eyeIcon.setAttribute('data-lucide', 'eye');
+            }
+            lucide.createIcons();
+        });
+
+        document.getElementById('fill-demo-btn').addEventListener('click', () => {
+            document.getElementById('admin-id').value = 'ADMIN01';
+            document.getElementById('admin-password').value = 'Admin@2026';
+            loginError.classList.add('hidden');
+        });
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const inputId = document.getElementById('admin-id').value.trim().toUpperCase();
+            const inputPass = document.getElementById('admin-password').value;
+
+            const foundAdmin = VALID_ADMINS.find(a => a.id === inputId && a.passHash === inputPass);
+
+            if (!foundAdmin) {
+                loginError.classList.remove('hidden');
+                document.getElementById('login-error-text').textContent = 'Akses ditolak: ID Pentadbir atau Kata Laluan tidak sepadan.';
+                return;
+            }
+
+            loginError.classList.add('hidden');
+            activeAdmin = foundAdmin;
+
+            // Kemas kini UI Profil Admin
+            document.getElementById('logged-admin-name').textContent = activeAdmin.name;
+            document.getElementById('logged-admin-id').textContent = `ID: ${activeAdmin.id} • ${activeAdmin.role}`;
+
+            // Tukar Paparan ke Dashboard
+            loginScreen.classList.add('hidden');
+            adminDashboard.classList.remove('hidden');
+            showToast(`Selamat datang, ${activeAdmin.name}`, 'success');
+
+            // Mulakan sambungan pangkalan data masa nyata
+            await initDatabaseConnection();
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            activeAdmin = null;
+            document.getElementById('admin-password').value = '';
+            adminDashboard.classList.add('hidden');
+            loginScreen.classList.remove('hidden');
+            showToast('Sesi log keluar berjaya ditutup dengan selamat.', 'info');
+        });
+
+        // ==================== PENYEGERAKAN PANGKALAN DATA MASA NYATA ====================
+        async function initDatabaseConnection() {
+            if (!firebaseConfig) {
+                // Mod Sandaran Memori jika dijalankan tanpa konfigurasi awan
+                isRealtimeConnected = false;
+                if (membersList.length === 0) {
+                    membersList = getInitialSampleData();
+                }
+                renderDashboard();
+                return;
+            }
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // RULE 3: Auth dahulu sebelum akses pangkalan data
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    currentUser = user;
+                    if (user) {
+                        isRealtimeConnected = true;
+                        subscribeToMembers();
+                    }
+                });
+            } catch (err) {
+                console.error("Ralat sambungan pangkalan data:", err);
+                showToast("Menggunakan mod luar talian sementara.", "warning");
+                membersList = getInitialSampleData();
+                renderDashboard();
+            }
+        }
+
+        function getMembersCollectionRef() {
+            // RULE 1: Laluan koleksi awam yang sah
+            return collection(db, 'artifacts', appId, 'public', 'data', 'membership_applications');
+        }
+
+        function subscribeToMembers() {
+            if (!currentUser || !db) return;
+
+            // RULE 2: Tiada query kompleks, susun dalam memori JavaScript
+            const colRef = getMembersCollectionRef();
+            onSnapshot(colRef, (snapshot) => {
+                const fetched = [];
+                snapshot.forEach((docSnap) => {
+                    fetched.push({ id: docSnap.id, ...docSnap.data() });
+                });
+
+                // Susun mengikut tarikh terkini
+                fetched.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+                membersList = fetched;
+
+                document.getElementById('loading-state').classList.add('hidden');
+                renderDashboard();
+
+                // Jika modal butiran sedang dibuka, kemas kini paparannya secara masa nyata
+                if (selectedMemberId && !document.getElementById('detail-modal').classList.contains('hidden')) {
+                    const updatedMember = membersList.find(m => m.id === selectedMemberId);
+                    if (updatedMember) {
+                        populateDetailModal(updatedMember);
+                    }
+                }
+            }, (error) => {
+                console.error("Ralat pendengar masa nyata:", error);
+                document.getElementById('loading-state').classList.add('hidden');
+                showToast("Ralat menyegerakkan data masa nyata.", "error");
+            });
+        }
+
+        // ==================== OPERASI CRUD PANGKALAN DATA ====================
+        async function createNewMember(memberData) {
+            const now = new Date().toISOString();
+            const newRecord = {
+                ...memberData,
+                memberCode: generateMemberCode(),
+                status: 'Dalam Semakan',
+                createdAt: now,
+                updatedAt: now,
+                history: [
+                    {
+                        status: 'Dalam Semakan',
+                        timestamp: now,
+                        adminId: activeAdmin ? activeAdmin.id : 'SISTEM',
+                        adminName: activeAdmin ? activeAdmin.name : 'Pendaftaran Dalam Talian',
+                        remark: 'Permohonan pendaftaran diterima dan sedang menunggu semakan pegawai.'
+                    }
+                ]
+            };
+
+            if (isRealtimeConnected && currentUser && db) {
+                await addDoc(getMembersCollectionRef(), newRecord);
+            } else {
+                newRecord.id = 'local-' + Date.now();
+                membersList.unshift(newRecord);
+                renderDashboard();
+            }
+        }
+
+        async function updateMemberStatus(memberId, newStatus, remark) {
+            const member = membersList.find(m => m.id === memberId);
+            if (!member) return;
+
+            const now = new Date().toISOString();
+            const historyEntry = {
+                status: newStatus,
+                timestamp: now,
+                adminId: activeAdmin.id,
+                adminName: activeAdmin.name,
+                remark: remark || `Status permohonan dikemas kini kepada ${newStatus}.`
+            };
+
+            const updatedHistory = [historyEntry, ...(member.history || [])];
+
+            if (isRealtimeConnected && currentUser && db) {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'membership_applications', memberId);
+                await updateDoc(docRef, {
+                    status: newStatus,
+                    updatedAt: now,
+                    history: updatedHistory
+                });
+            } else {
+                member.status = newStatus;
+                member.updatedAt = now;
+                member.history = updatedHistory;
+                renderDashboard();
+                populateDetailModal(member);
+            }
+        }
+
+        async function updateMemberDetails(memberId, updatedFields) {
+            const member = membersList.find(m => m.id === memberId);
+            if (!member) return;
+
+            const now = new Date().toISOString();
+            const historyEntry = {
+                status: member.status,
+                timestamp: now,
+                adminId: activeAdmin.id,
+                adminName: activeAdmin.name,
+                remark: 'Maklumat profil pemohon telah dikemas kini oleh pentadbir.'
+            };
+
+            const updatedHistory = [historyEntry, ...(member.history || [])];
+
+            if (isRealtimeConnected && currentUser && db) {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'membership_applications', memberId);
+                await updateDoc(docRef, {
+                    ...updatedFields,
+                    updatedAt: now,
+                    history: updatedHistory
+                });
+            } else {
+                Object.assign(member, updatedFields, { updatedAt: now, history: updatedHistory });
+                renderDashboard();
+                populateDetailModal(member);
+            }
+        }
+
+        async function removeMemberRecord(memberId) {
+            if (isRealtimeConnected && currentUser && db) {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'membership_applications', memberId);
+                await deleteDoc(docRef);
+            } else {
+                membersList = membersList.filter(m => m.id !== memberId);
+                renderDashboard();
+            }
+        }
+
+        // ==================== PENJANAAN DATA SAMPEL ====================
+        function getInitialSampleData() {
+            const now = Date.now();
+            return [
+                {
+                    id: 'sample-1',
+                    memberCode: 'AHL-2026-1042',
+                    fullName: 'Muhammad Amirul Hakim bin Zulkifli',
+                    icNumber: '910814-10-5431',
+                    phone: '013-7789210',
+                    email: 'amirul.hakim@email.my',
+                    gender: 'Lelaki',
+                    dob: '1991-08-14',
+                    category: 'Ahli Seumur Hidup',
+                    occupation: 'Jurutera Awam',
+                    address: 'No. 24, Jalan Setiawangsa 11, Taman Setiawangsa, 54200 Kuala Lumpur',
+                    notes: 'Berminat menyertai jawatankuasa kebajikan komuniti.',
+                    status: 'Lulus',
+                    createdAt: new Date(now - 86400000 * 3).toISOString(),
+                    updatedAt: new Date(now - 86400000 * 1).toISOString(),
+                    history: [
+                        {
+                            status: 'Lulus',
+                            timestamp: new Date(now - 86400000 * 1).toISOString(),
+                            adminId: 'ADMIN01',
+                            adminName: 'Datuk Seri Ahmad (Ketua Pentadbir)',
+                            remark: 'Semua dokumen pengenalan dan bayaran yuran seumur hidup disahkan.'
+                        },
+                        {
+                            status: 'Dalam Semakan',
+                            timestamp: new Date(now - 86400000 * 3).toISOString(),
+                            adminId: 'SISTEM',
+                            adminName: 'Portal Pendaftaran',
+                            remark: 'Permohonan baharu diterima.'
+                        }
+                    ]
+                },
+                {
+                    id: 'sample-2',
+                    memberCode: 'AHL-2026-1089',
+                    fullName: 'Nur Aisyah Sofea binti Kamaludin',
+                    icNumber: '950322-08-6128',
+                    phone: '019-4421908',
+                    email: 'aisyah.sofea@syarikat.com',
+                    gender: 'Perempuan',
+                    dob: '1995-03-22',
+                    category: 'Ahli Biasa',
+                    occupation: 'Pegawai Tadbir & Diplomatik',
+                    address: 'Lot 88, Persiaran Meru Raya 4, 30020 Ipoh, Perak',
+                    notes: 'Permohonan keahlian baharu sesi 2026.',
+                    status: 'Dalam Semakan',
+                    createdAt: new Date(now - 3600000 * 5).toISOString(),
+                    updatedAt: new Date(now - 3600000 * 5).toISOString(),
+                    history: [
+                        {
+                            status: 'Dalam Semakan',
+                            timestamp: new Date(now - 3600000 * 5).toISOString(),
+                            adminId: 'SISTEM',
+                            adminName: 'Portal Pendaftaran',
+                            remark: 'Menunggu pengesahan alamat bermastautin.'
+                        }
+                    ]
+                },
+                {
+                    id: 'sample-3',
+                    memberCode: 'AHL-2026-1094',
+                    fullName: 'Kavitha a/p Subramaniam',
+                    icNumber: '881105-07-5092',
+                    phone: '016-5590123',
+                    email: 'kavitha.subra@gmail.com',
+                    gender: 'Perempuan',
+                    dob: '1988-11-05',
+                    category: 'Ahli Bersekutu',
+                    occupation: 'Pensyarah Universiti',
+                    address: '15-2, Kondominium Sri Pinang, Jalan Sungai Pinang, 10150 Georgetown, Pulau Pinang',
+                    notes: 'Disokong oleh ahli sedia ada (AHL-2024-0088).',
+                    status: 'Dalam Semakan',
+                    createdAt: new Date(now - 3600000 * 2).toISOString(),
+                    updatedAt: new Date(now - 3600000 * 2).toISOString(),
+                    history: [
+                        {
+                            status: 'Dalam Semakan',
+                            timestamp: new Date(now - 3600000 * 2).toISOString(),
+                            adminId: 'SISTEM',
+                            adminName: 'Portal Pendaftaran',
+                            remark: 'Permohonan diterima dalam sistem.'
+                        }
+                    ]
+                },
+                {
+                    id: 'sample-4',
+                    memberCode: 'AHL-2026-1015',
+                    fullName: 'Tan Wei Ming',
+                    icNumber: '030719-14-5891',
+                    phone: '011-23498871',
+                    email: 'weiming.tan@student.edu.my',
+                    gender: 'Lelaki',
+                    dob: '2003-07-19',
+                    category: 'Ahli Belia',
+                    occupation: 'Pelajar Tahun Akhir',
+                    address: 'No. 9, Jalan SS15/4B, 47500 Subang Jaya, Selangor',
+                    notes: 'Salinan kad pengenalan kurang jelas semasa muat naik.',
+                    status: 'Gagal Diluluskan',
+                    createdAt: new Date(now - 86400000 * 6).toISOString(),
+                    updatedAt: new Date(now - 86400000 * 2).toISOString(),
+                    history: [
+                        {
+                            status: 'Gagal Diluluskan',
+                            timestamp: new Date(now - 86400000 * 2).toISOString(),
+                            adminId: 'PEGAWAI02',
+                            adminName: 'Puan Nurul Huda (Pegawai Keahlian)',
+                            remark: 'Maklumat pengenalan diri tidak lengkap dan gagal disahkan selepas tempoh 3 hari.'
+                        },
+                        {
+                            status: 'Dalam Semakan',
+                            timestamp: new Date(now - 86400000 * 6).toISOString(),
+                            adminId: 'SISTEM',
+                            adminName: 'Portal Pendaftaran',
+                            remark: 'Permohonan diterima.'
+                        }
+                    ]
+                }
+            ];
+        }
+
+        async function seedSampleRecords() {
+            const samples = getInitialSampleData();
+            showToast('Sedang memuat naik data sampel ke pangkalan data...', 'info');
+            for (const item of samples) {
+                const { id, ...cleanData } = item;
+                if (isRealtimeConnected && currentUser && db) {
+                    await addDoc(getMembersCollectionRef(), cleanData);
+                } else {
+                    membersList.push({ id: 'local-' + Math.random().toString(36).slice(2, 7), ...cleanData });
+                }
+            }
+            if (!isRealtimeConnected) renderDashboard();
+            showToast('4 rekod sampel berjaya dijana!', 'success');
+        }
+
+        document.getElementById('seed-sample-btn').addEventListener('click', seedSampleRecords);
+        document.getElementById('empty-seed-btn').addEventListener('click', seedSampleRecords);
+
+        // ==================== PAPARAN DASHBOARD, STATISTIK & TAPISAN ====================
+        function renderDashboard() {
+            // 1. Kira Statistik
+            const total = membersList.length;
+            const approved = membersList.filter(m => m.status === 'Lulus').length;
+            const pending = membersList.filter(m => m.status === 'Dalam Semakan').length;
+            const rejected = membersList.filter(m => m.status === 'Gagal Diluluskan').length;
+            const approvedPct = total > 0 ? Math.round((approved / total) * 100) : 0;
+
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-approved').textContent = approved;
+            document.getElementById('stat-approved-pct').textContent = `${approvedPct}% daripada jumlah`;
+            document.getElementById('stat-pending').textContent = pending;
+            document.getElementById('stat-rejected').textContent = rejected;
+
+            // Kemas kini lencana di Sidebar
+            document.getElementById('nav-badge-all').textContent = total;
+            document.getElementById('nav-badge-pending').textContent = pending;
+            document.getElementById('nav-badge-approved').textContent = approved;
+            document.getElementById('nav-badge-rejected').textContent = rejected;
+
+            // 2. Tapis Senarai Mengikut Carian & Dropdown
+            const searchTerm = document.getElementById('search-input').value.trim().toLowerCase();
+            const statusFilter = document.getElementById('filter-status').value;
+            const categoryFilter = document.getElementById('filter-category').value;
+
+            const filtered = membersList.filter(m => {
+                const matchesStatus = statusFilter === 'all' || m.status === statusFilter;
+                const matchesCategory = categoryFilter === 'all' || m.category === categoryFilter;
+                const matchesSearch = !searchTerm ||
+                    (m.fullName && m.fullName.toLowerCase().includes(searchTerm)) ||
+                    (m.icNumber && m.icNumber.toLowerCase().includes(searchTerm)) ||
+                    (m.memberCode && m.memberCode.toLowerCase().includes(searchTerm)) ||
+                    (m.email && m.email.toLowerCase().includes(searchTerm)) ||
+                    (m.phone && m.phone.toLowerCase().includes(searchTerm));
+                return matchesStatus && matchesCategory && matchesSearch;
+            });
+
+            document.getElementById('filtered-count-badge').textContent = `${filtered.length} rekod`;
+            document.getElementById('loading-state').classList.add('hidden');
+
+            const emptyState = document.getElementById('empty-state');
+            const tableWrapper = document.getElementById('desktop-table-wrapper');
+            const mobileWrapper = document.getElementById('mobile-cards-wrapper');
+            const tbody = document.getElementById('members-table-body');
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                tableWrapper.classList.add('hidden');
+                mobileWrapper.classList.add('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            tableWrapper.classList.remove('hidden');
+            tableWrapper.classList.add('md:block');
+            mobileWrapper.classList.remove('hidden');
+
+            // 3. Bina Baris Jadual (Desktop)
+            tbody.innerHTML = filtered.map(member => `
+                <tr class="hover:bg-slate-50/90 transition group">
+                    <td class="py-4 px-5">
+                        <div class="font-bold text-slate-900 group-hover:text-brand-600 transition">${member.fullName}</div>
+                        <div class="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+                            <span class="font-mono font-semibold text-brand-600">${member.memberCode || '-'}</span>
+                            <span>•</span>
+                            <span>${member.phone}</span>
+                        </div>
+                    </td>
+                    <td class="py-4 px-4 font-mono text-xs text-slate-700 font-medium">${member.icNumber}</td>
+                    <td class="py-4 px-4">
+                        <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium">${member.category}</span>
+                    </td>
+                    <td class="py-4 px-4 text-xs text-slate-500">${formatDateTime(member.createdAt)}</td>
+                    <td class="py-4 px-4">${getStatusBadgeHTML(member.status)}</td>
+                    <td class="py-4 px-5 text-right">
+                        <div class="inline-flex items-center justify-end gap-1.5">
+                            <button onclick="window.quickApprove('${member.id}', 'Lulus')" title="Luluskan Segera"
+                                class="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white transition">
+                                <i data-lucide="check" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="window.quickApprove('${member.id}', 'Gagal Diluluskan')" title="Gagal Diluluskan"
+                                class="p-2 rounded-xl bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white transition">
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="window.openMemberDetail('${member.id}')"
+                                class="px-3 py-2 rounded-xl bg-slate-900 hover:bg-brand-600 text-white text-xs font-semibold flex items-center gap-1.5 transition">
+                                <i data-lucide="eye" class="w-3.5 h-3.5"></i> Semak
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            // 4. Bina Kad Responsif (Telefon Pintar)
+            mobileWrapper.innerHTML = filtered.map(member => `
+                <div class="p-4 space-y-3 hover:bg-slate-50 transition">
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <span class="font-mono text-[11px] font-bold text-brand-600">${member.memberCode || '-'}</span>
+                            <h4 class="font-bold text-slate-900 text-sm">${member.fullName}</h4>
+                            <p class="text-xs text-slate-500 font-mono mt-0.5">IC: ${member.icNumber}</p>
+                        </div>
+                        ${getStatusBadgeHTML(member.status)}
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-slate-500 bg-slate-50 px-3 py-2 rounded-xl">
+                        <span>${member.category}</span>
+                        <span>${formatDateTime(member.createdAt)}</span>
+                    </div>
+                    <div class="flex items-center gap-2 pt-1">
+                        <button onclick="window.openMemberDetail('${member.id}')"
+                            class="flex-1 py-2.5 px-3 bg-slate-900 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5">
+                            <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Butiran & Kelulusan
+                        </button>
+                        <button onclick="window.quickApprove('${member.id}', 'Lulus')"
+                            class="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-200">
+                            <i data-lucide="check" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="window.quickApprove('${member.id}', 'Gagal Diluluskan')"
+                            class="p-2.5 bg-rose-50 text-rose-600 rounded-xl border border-rose-200">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        // Event Listeners untuk Carian, Tapisan & Navigasi Sidebar
+        document.getElementById('search-input').addEventListener('input', renderDashboard);
+        document.getElementById('filter-status').addEventListener('change', renderDashboard);
+        document.getElementById('filter-category').addEventListener('change', renderDashboard);
+
+        document.getElementById('reset-filters-btn').addEventListener('click', () => {
+            document.getElementById('search-input').value = '';
+            document.getElementById('filter-status').value = 'all';
+            document.getElementById('filter-category').value = 'all';
+            renderDashboard();
+        });
+
+        document.querySelectorAll('.nav-item').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.nav-item').forEach(b => {
+                    b.classList.remove('bg-brand-600', 'text-white');
+                    b.classList.add('text-slate-300');
+                });
+                btn.classList.add('bg-brand-600', 'text-white');
+                btn.classList.remove('text-slate-300');
+
+                const statusTarget = btn.getAttribute('data-nav');
+                document.getElementById('filter-status').value = statusTarget;
+                renderDashboard();
+                closeMobileSidebar();
+            });
+        });
+
+        // ==================== KAWALAN SIDEBAR MUDAH ALIH ====================
+        const sidebar = document.getElementById('sidebar');
+        const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+
+        function openMobileSidebar() {
+            sidebar.classList.remove('-translate-x-full');
+            sidebarBackdrop.classList.remove('hidden');
+        }
+        function closeMobileSidebar() {
+            sidebar.classList.add('-translate-x-full');
+            sidebarBackdrop.classList.add('hidden');
+        }
+        document.getElementById('open-sidebar-btn').addEventListener('click', openMobileSidebar);
+        document.getElementById('close-sidebar-btn').addEventListener('click', closeMobileSidebar);
+        sidebarBackdrop.addEventListener('click', closeMobileSidebar);
+
+        // ==================== MODAL BUTIRAN, KELULUSAN, KEMAS KINI & SEJARAH ====================
+        const detailModal = document.getElementById('detail-modal');
+
+        window.quickApprove = async function(memberId, targetStatus) {
+            const member = membersList.find(m => m.id === memberId);
+            if (!member) return;
+            if (member.status === targetStatus) {
+                showToast(`Permohonan ini sudah berstatus "${targetStatus}".`, 'info');
+                return;
+            }
+            const defaultRemark = targetStatus === 'Lulus'
+                ? 'Permohonan diluluskan selepas semakan pantas pentadbir.'
+                : 'Permohonan ditolak / gagal diluluskan oleh pentadbir.';
+            await updateMemberStatus(memberId, targetStatus, defaultRemark);
+            showToast(`Status ${member.fullName} dikemas kini kepada ${targetStatus}.`, targetStatus === 'Lulus' ? 'success' : 'warning');
+        };
+
+        window.openMemberDetail = function(memberId) {
+            const member = membersList.find(m => m.id === memberId);
+            if (!member) return;
+
+            selectedMemberId = memberId;
+            pendingStatusTarget = null;
+            document.getElementById('status-remark-box').classList.add('hidden');
+            document.getElementById('delete-confirm-box').classList.add('hidden');
+
+            // Set Tab lalai kepada 'info'
+            switchModalTab('info');
+            populateDetailModal(member);
+            detailModal.classList.remove('hidden');
+        };
+
+        function populateDetailModal(member) {
+            document.getElementById('modal-member-name').textContent = member.fullName;
+            document.getElementById('modal-member-ref').textContent = `No. Keahlian: ${member.memberCode || '-'} • Dikemas kini: ${formatDateTime(member.updatedAt)}`;
+            document.getElementById('modal-status-badge').innerHTML = getStatusBadgeHTML(member.status);
+
+            // Tab 1: Paparan Butiran
+            document.getElementById('view-fullName').textContent = member.fullName || '-';
+            document.getElementById('view-icNumber').textContent = member.icNumber || '-';
+            document.getElementById('view-memberCode').textContent = member.memberCode || '-';
+            document.getElementById('view-phone').textContent = member.phone || '-';
+            document.getElementById('view-email').textContent = member.email || '-';
+            document.getElementById('view-dob-gender').textContent = `${member.dob || '-'} (${member.gender || '-'})`;
+            document.getElementById('view-occupation').textContent = member.occupation || '-';
+            document.getElementById('view-category').textContent = member.category || '-';
+            document.getElementById('view-appliedDate').textContent = formatDateTime(member.createdAt);
+            document.getElementById('view-address').textContent = member.address || '-';
+            document.getElementById('view-notes').textContent = member.notes || 'Tiada catatan tambahan.';
+
+            // Tab 2: Borang Kemas Kini
+            document.getElementById('edit-fullName').value = member.fullName || '';
+            document.getElementById('edit-icNumber').value = member.icNumber || '';
+            document.getElementById('edit-phone').value = member.phone || '';
+            document.getElementById('edit-email').value = member.email || '';
+            document.getElementById('edit-gender').value = member.gender || 'Lelaki';
+            document.getElementById('edit-category').value = member.category || 'Ahli Biasa';
+            document.getElementById('edit-occupation').value = member.occupation || '';
+            document.getElementById('edit-dob').value = member.dob || '';
+            document.getElementById('edit-address').value = member.address || '';
+            document.getElementById('edit-notes').value = member.notes || '';
+
+            // Tab 3: Sejarah Kelulusan & Audit
+            const history = member.history || [];
+            document.getElementById('history-count-tab').textContent = history.length;
+
+            const timelineEl = document.getElementById('history-timeline');
+            if (history.length === 0) {
+                timelineEl.innerHTML = `<p class="text-xs text-slate-400">Tiada rekod sejarah dicatatkan.</p>`;
+            } else {
+                timelineEl.innerHTML = history.map(item => `
+                    <div class="relative bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
+                        <span class="absolute -left-[30px] top-4 w-3 h-3 rounded-full bg-brand-600 ring-4 ring-white"></span>
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
+                            ${getStatusBadgeHTML(item.status)}
+                            <span class="text-[11px] text-slate-400 font-medium">${formatDateTime(item.timestamp)}</span>
+                        </div>
+                        <p class="text-xs text-slate-700 mt-1.5">${item.remark}</p>
+                        <p class="text-[11px] text-slate-500 mt-1.5 font-medium">Oleh: <span class="text-slate-800">${item.adminName}</span> (${item.adminId})</p>
+                    </div>
+                `).join('');
+            }
+
+            // Data Cetakan
+            document.getElementById('print-date').textContent = formatDateTime(new Date().toISOString());
+            document.getElementById('print-ref-code').textContent = `Rujukan: ${member.memberCode}`;
+            const latest = history[0];
+            document.getElementById('print-latest-audit').innerHTML = latest
+                ? `<strong>Status:</strong> ${latest.status} | <strong>Disahkan Oleh:</strong> ${latest.adminName} (${latest.adminId}) | <strong>Tarikh:</strong> ${formatDateTime(latest.timestamp)}<br><strong>Catatan:</strong> ${latest.remark}`
+                : `Status semasa: ${member.status}`;
+        }
+
+        function switchModalTab(tabName) {
+            document.querySelectorAll('.modal-tab').forEach(t => {
+                if (t.getAttribute('data-tab') === tabName) {
+                    t.classList.add('border-brand-600', 'text-brand-600');
+                    t.classList.remove('border-transparent', 'text-slate-500');
+                } else {
+                    t.classList.remove('border-brand-600', 'text-brand-600');
+                    t.classList.add('border-transparent', 'text-slate-500');
+                }
+            });
+
+            ['info', 'edit', 'history'].forEach(name => {
+                const el = document.getElementById(`tab-content-${name}`);
+                if (name === tabName) el.classList.remove('hidden');
+                else el.classList.add('hidden');
+            });
+        }
+
+        document.querySelectorAll('.modal-tab').forEach(btn => {
+            btn.addEventListener('click', () => switchModalTab(btn.getAttribute('data-tab')));
+        });
+
+        document.getElementById('close-detail-modal').addEventListener('click', () => {
+            detailModal.classList.add('hidden');
+            selectedMemberId = null;
+        });
+
+        // Kawalan Butang Status dalam Modal (Lulus, Dalam Semakan, Gagal Diluluskan)
+        document.querySelectorAll('.status-action-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                pendingStatusTarget = btn.getAttribute('data-action-status');
+                document.getElementById('target-status-label').textContent = pendingStatusTarget;
+                document.getElementById('status-remark-input').value = '';
+                document.getElementById('status-remark-box').classList.remove('hidden');
+                document.getElementById('status-remark-input').focus();
+            });
+        });
+
+        document.getElementById('cancel-status-change').addEventListener('click', () => {
+            pendingStatusTarget = null;
+            document.getElementById('status-remark-box').classList.add('hidden');
+        });
+
+        document.getElementById('confirm-status-btn').addEventListener('click', async () => {
+            if (!selectedMemberId || !pendingStatusTarget) return;
+            const remark = document.getElementById('status-remark-input').value.trim();
+            await updateMemberStatus(selectedMemberId, pendingStatusTarget, remark);
+            document.getElementById('status-remark-box').classList.add('hidden');
+            showToast(`Status permohonan berjaya ditukar kepada "${pendingStatusTarget}".`, 'success');
+            pendingStatusTarget = null;
+        });
+
+        // Simpan Kemas Kini Maklumat Ahli
+        document.getElementById('edit-member-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!selectedMemberId) return;
+
+            const updatedFields = {
+                fullName: document.getElementById('edit-fullName').value.trim(),
+                icNumber: document.getElementById('edit-icNumber').value.trim(),
+                phone: document.getElementById('edit-phone').value.trim(),
+                email: document.getElementById('edit-email').value.trim(),
+                gender: document.getElementById('edit-gender').value,
+                category: document.getElementById('edit-category').value,
+                occupation: document.getElementById('edit-occupation').value.trim(),
+                dob: document.getElementById('edit-dob').value,
+                address: document.getElementById('edit-address').value.trim(),
+                notes: document.getElementById('edit-notes').value.trim(),
+            };
+
+            await updateMemberDetails(selectedMemberId, updatedFields);
+            showToast('Maklumat profil ahli berjaya dikemas kini!', 'success');
+            switchModalTab('info');
+        });
+
+        // Padam Rekod Ahli
+        document.getElementById('delete-member-btn').addEventListener('click', () => {
+            document.getElementById('delete-confirm-box').classList.remove('hidden');
+        });
+        document.getElementById('cancel-delete-btn').addEventListener('click', () => {
+            document.getElementById('delete-confirm-box').classList.add('hidden');
+        });
+        document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+            if (!selectedMemberId) return;
+            await removeMemberRecord(selectedMemberId);
+            detailModal.classList.add('hidden');
+            selectedMemberId = null;
+            showToast('Rekod keahlian telah dipadam daripada sistem.', 'warning');
+        });
+
+        // Cetak Maklumat Ahli
+        document.getElementById('print-member-btn').addEventListener('click', () => {
+            switchModalTab('info');
+            setTimeout(() => {
+                window.print();
+            }, 150);
+        });
+
+        // ==================== MODAL PERMOHONAN BARU ====================
+        const newMemberModal = document.getElementById('new-member-modal');
+
+        function openNewMemberModal() {
+            document.getElementById('new-member-form').reset();
+            newMemberModal.classList.remove('hidden');
+            closeMobileSidebar();
+        }
+
+        document.getElementById('open-new-member-modal').addEventListener('click', openNewMemberModal);
+        document.getElementById('header-add-btn').addEventListener('click', openNewMemberModal);
+        document.getElementById('close-new-modal').addEventListener('click', () => newMemberModal.classList.add('hidden'));
+        document.getElementById('cancel-new-modal').addEventListener('click', () => newMemberModal.classList.add('hidden'));
+
+        document.getElementById('new-member-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                fullName: document.getElementById('new-fullName').value.trim(),
+                icNumber: document.getElementById('new-icNumber').value.trim(),
+                phone: document.getElementById('new-phone').value.trim(),
+                email: document.getElementById('new-email').value.trim(),
+                gender: document.getElementById('new-gender').value,
+                dob: document.getElementById('new-dob').value,
+                category: document.getElementById('new-category').value,
+                occupation: document.getElementById('new-occupation').value.trim(),
+                address: document.getElementById('new-address').value.trim(),
+                notes: document.getElementById('new-notes').value.trim()
+            };
+
+            await createNewMember(payload);
+            newMemberModal.classList.add('hidden');
+            showToast('Permohonan pendaftaran baharu berjaya direkodkan!', 'success');
+        });
+    </script>
+</body>
+</html>
